@@ -1017,7 +1017,50 @@ curl -I http://localhost:3000
 # 查看服务启动顺序
 docker compose logs --timestamps | grep "Ready in"
 ```
+### 🔐 fnOS 版本（推荐：多用户 + 同步）
+```
+version: '3.8'
+services:
+  # KatelyaTV 主应用
+  katelyatv:
+    image: ghcr.io/katelya77/katelyatv:latest
+    container_name: katelyatv
+    ports:
+      - "3000:3000"
+    environment:
+      # 管理员账号（请修改）
+      - USERNAME=admin
+      - PASSWORD=your_strong_password
+      # 启用 Redis 存储
+      - NEXT_PUBLIC_STORAGE_TYPE=redis
+      - REDIS_URL=redis://katelyatv-redis:6379
+      # 允许用户注册（可选）
+      - NEXT_PUBLIC_ENABLE_REGISTER=true
+    depends_on:
+      katelyatv-redis:
+        condition: service_healthy
+    restart: unless-stopped
+    # 可选：挂载自定义配置
+    # volumes:
+    #   - ./config.json:/app/config.json:ro
 
+  # Redis 数据库
+  katelyatv-redis:
+    image: redis:7-alpine
+    container_name: katelyatv-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - katelyatv-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  katelyatv-redis-data:
+```
 ### 🔄 管理与维护
 
 ```bash
